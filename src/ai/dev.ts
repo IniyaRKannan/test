@@ -1,1 +1,6 @@
-// Flows will be imported for their side effects in this file.
+import { config } from 'dotenv';
+config();
+
+import '@/ai/flows/mental-wellness-chatbot-interaction.ts';
+import '@/ai/flows/suggest-break-activity.ts';
+import '@/ai/flows/generate-initial-timetable.ts';
