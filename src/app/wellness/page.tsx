@@ -34,7 +34,8 @@ import {
   Activity,
   Wind,
   Search,
-  ListMusic
+  ListMusic,
+  ExternalLink
 } from "lucide-react"
 import { mentalWellnessChat } from "@/ai/flows/mental-wellness-chatbot-interaction"
 
@@ -81,8 +82,11 @@ export default function WellnessHub() {
   // Audio State
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [volume, setVolume] = useState(70)
   const [playbackProgress, setPlaybackProgress] = useState(0)
+
+  // Spotify State
+  const [isSpotifyConnected, setIsSpotifyConnected] = useState(false)
+  const [spotifyPlaylistId, setSpotifyPlaylistId] = useState("37i9dQZF1DX8Ueb9C7V6rN") // Lofi Fruits Music
 
   // Game State
   const [isGameOpen, setIsGameOpen] = useState(false);
@@ -180,6 +184,10 @@ export default function WellnessHub() {
     setCurrentTrack(track)
     setIsPlaying(true)
     setPlaybackProgress(0)
+  }
+
+  const handleSpotifyConnect = () => {
+    setIsSpotifyConnected(true)
   }
 
   return (
@@ -354,50 +362,111 @@ export default function WellnessHub() {
 
         <TabsContent value="leisure" className="mt-8 space-y-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <Card className="lg:col-span-2 shadow-xl border-none overflow-hidden">
-              <CardHeader className="border-b bg-card">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <ListMusic className="w-5 h-5 text-primary" />
-                    <CardTitle className="text-xl">Music Library</CardTitle>
+            <div className="lg:col-span-2 space-y-8">
+              <Card className="shadow-xl border-none overflow-hidden">
+                <CardHeader className="border-b bg-card">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <ListMusic className="w-5 h-5 text-primary" />
+                      <CardTitle className="text-xl">Music Library</CardTitle>
+                    </div>
+                    <div className="relative w-48">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input placeholder="Search tracks..." className="pl-8 h-8 text-xs rounded-full" />
+                    </div>
                   </div>
-                  <div className="relative w-48">
-                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input placeholder="Search tracks..." className="pl-8 h-8 text-xs rounded-full" />
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <ScrollArea className="h-[450px]">
-                  <div className="p-4 space-y-1">
-                    {TRACKS.map((track) => (
-                      <div 
-                        key={track.id} 
-                        onClick={() => handlePlayTrack(track)}
-                        className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all hover:bg-primary/5 group ${currentTrack?.id === track.id ? 'bg-primary/10 border-l-4 border-primary' : ''}`}
-                      >
-                        <div className="flex items-center gap-4">
-                          <Avatar className="w-10 h-10 rounded-lg shadow-sm">
-                            <AvatarImage src={track.coverUrl} />
-                            <AvatarFallback><Music className="w-4 h-4" /></AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="text-sm font-bold leading-none">{track.title}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{track.artist} • {track.genre}</p>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <ScrollArea className="h-[300px]">
+                    <div className="p-4 space-y-1">
+                      {TRACKS.map((track) => (
+                        <div 
+                          key={track.id} 
+                          onClick={() => handlePlayTrack(track)}
+                          className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all hover:bg-primary/5 group ${currentTrack?.id === track.id ? 'bg-primary/10 border-l-4 border-primary' : ''}`}
+                        >
+                          <div className="flex items-center gap-4">
+                            <Avatar className="w-10 h-10 rounded-lg shadow-sm">
+                              <AvatarImage src={track.coverUrl} />
+                              <AvatarFallback><Music className="w-4 h-4" /></AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="text-sm font-bold leading-none">{track.title}</p>
+                              <p className="text-xs text-muted-foreground mt-1">{track.artist} • {track.genre}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-6">
+                            <span className="text-xs font-medium text-muted-foreground tabular-nums">{track.duration}</span>
+                            <Button size="icon" variant="ghost" className="opacity-0 group-hover:opacity-100 h-8 w-8 rounded-full bg-primary/10 text-primary">
+                              <Play className="w-4 h-4" />
+                            </Button>
                           </div>
                         </div>
-                        <div className="flex items-center gap-6">
-                          <span className="text-xs font-medium text-muted-foreground tabular-nums">{track.duration}</span>
-                          <Button size="icon" variant="ghost" className="opacity-0 group-hover:opacity-100 h-8 w-8 rounded-full bg-primary/10 text-primary">
-                            <Play className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+
+              {/* Spotify Integration Section */}
+              <Card className="shadow-xl border-none overflow-hidden bg-zinc-950 text-white">
+                <CardHeader className="border-b border-white/10 flex flex-row items-center justify-between bg-zinc-900/50">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-[#1DB954] p-1.5 rounded-full">
+                      <Music className="w-5 h-5 text-black" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg">Spotify for Study</CardTitle>
+                      <CardDescription className="text-zinc-400 text-xs">Connect your own playlists</CardDescription>
+                    </div>
                   </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
+                  {!isSpotifyConnected ? (
+                    <Button 
+                      onClick={handleSpotifyConnect}
+                      className="bg-[#1DB954] hover:bg-[#1ed760] text-black font-bold rounded-full px-6"
+                    >
+                      Connect Spotify
+                    </Button>
+                  ) : (
+                    <Badge className="bg-[#1DB954]/20 text-[#1DB954] border-[#1DB954]/50">
+                      Connected as Jane
+                    </Badge>
+                  )}
+                </CardHeader>
+                <CardContent className="p-6">
+                  {isSpotifyConnected ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="text-sm font-bold text-zinc-300">Recommended Study Playlist</h4>
+                        <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white h-7 gap-2">
+                          <ExternalLink className="w-3 h-3" /> Open in App
+                        </Button>
+                      </div>
+                      <div className="rounded-xl overflow-hidden bg-black aspect-video relative">
+                         <iframe 
+                          src={`https://open.spotify.com/embed/playlist/${spotifyPlaylistId}?utm_source=generator&theme=0`} 
+                          width="100%" 
+                          height="100%" 
+                          frameBorder="0" 
+                          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                          loading="lazy"
+                          className="absolute inset-0 border-none"
+                        ></iframe>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 space-y-4">
+                      <div className="w-16 h-16 bg-zinc-900 rounded-full flex items-center justify-center mx-auto">
+                        <ShieldCheck className="w-8 h-8 text-zinc-700" />
+                      </div>
+                      <div className="max-w-xs mx-auto">
+                        <p className="text-sm text-zinc-400">Log in to Spotify to sync your favorite focus tracks and discover curated student playlists.</p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
 
             <div className="space-y-6">
               <Card className="shadow-lg border-none overflow-hidden bg-primary text-white">
@@ -430,7 +499,7 @@ export default function WellnessHub() {
       </Tabs>
 
       {/* Persistent Audio Player Overlay */}
-      {currentTrack && (
+      {currentTrack && !isSpotifyConnected && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-50 animate-in slide-in-from-bottom-10 duration-500">
           <Card className="shadow-2xl border-primary/20 bg-white/95 backdrop-blur-md rounded-2xl overflow-hidden">
             <Progress value={playbackProgress} className="h-1 rounded-none bg-slate-100" />
