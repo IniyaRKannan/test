@@ -1,28 +1,43 @@
 "use client"
 
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { 
   MessageCircle, 
   Music, 
   Gamepad2, 
   Send, 
+  Heart, 
+  Volume2, 
+  Play,
+  Zap,
   Sparkles,
-  Loader2,
-  Heart,
-  Volume2,
-  Play
+  Coffee,
+  ShieldCheck,
+  Clock,
+  RefreshCcw,
+  Trophy
 } from "lucide-react"
 import { mentalWellnessChat } from "@/ai/flows/mental-wellness-chatbot-interaction"
 
 type Message = {
   role: 'user' | 'ai'
   content: string
+}
+
+// Memory Game Logic & Components
+const ICONS = [Zap, Heart, Sparkles, Music, Gamepad2, Coffee, ShieldCheck, Clock];
+
+interface MemoryCard {
+  id: number;
+  iconIndex: number;
+  isFlipped: boolean;
+  isMatched: boolean;
 }
 
 export default function WellnessHub() {
@@ -33,11 +48,74 @@ export default function WellnessHub() {
   const [isTyping, setIsTyping] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
+  // Game State
+  const [isGameOpen, setIsGameOpen] = useState(false);
+  const [cards, setCards] = useState<MemoryCard[]>([]);
+  const [flippedIndices, setFlippedIndices] = useState<number[]>([]);
+  const [moves, setMoves] = useState(0);
+  const [isWon, setIsWon] = useState(false);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' })
     }
   }, [messages])
+
+  const initGame = useCallback(() => {
+    const cardPairs = [...ICONS.keys(), ...ICONS.keys()];
+    const shuffledCards = cardPairs
+      .sort(() => Math.random() - 0.5)
+      .map((iconIndex, id) => ({
+        id,
+        iconIndex,
+        isFlipped: false,
+        isMatched: false,
+      }));
+    setCards(shuffledCards);
+    setFlippedIndices([]);
+    setMoves(0);
+    setIsWon(false);
+  }, []);
+
+  const handleCardClick = (index: number) => {
+    if (cards[index].isFlipped || cards[index].isMatched || flippedIndices.length === 2) return;
+
+    const newCards = [...cards];
+    newCards[index].isFlipped = true;
+    setCards(newCards);
+
+    const newFlipped = [...flippedIndices, index];
+    setFlippedIndices(newFlipped);
+
+    if (newFlipped.length === 2) {
+      setMoves(m => m + 1);
+      const [first, second] = newFlipped;
+      
+      if (cards[first].iconIndex === cards[second].iconIndex) {
+        // Match found
+        setTimeout(() => {
+          const matchedCards = [...cards];
+          matchedCards[first].isMatched = true;
+          matchedCards[second].isMatched = true;
+          setCards(matchedCards);
+          setFlippedIndices([]);
+          
+          if (matchedCards.every(c => c.isMatched)) {
+            setIsWon(true);
+          }
+        }, 500);
+      } else {
+        // No match
+        setTimeout(() => {
+          const resetCards = [...cards];
+          resetCards[first].isFlipped = false;
+          resetCards[second].isFlipped = false;
+          setCards(resetCards);
+          setFlippedIndices([]);
+        }, 1000);
+      }
+    }
+  };
 
   async function handleSend() {
     if (!input.trim()) return
@@ -167,11 +245,75 @@ export default function WellnessHub() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground italic">"Memory matching helps reduce cognitive load after long study sessions."</p>
-              <Button className="w-full bg-primary hover:bg-primary/90">Play Memory Reset</Button>
+              <Button 
+                className="w-full bg-primary hover:bg-primary/90"
+                onClick={() => {
+                  initGame();
+                  setIsGameOpen(true);
+                }}
+              >
+                Play Memory Reset
+              </Button>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Memory Match Dialog */}
+      <Dialog open={isGameOpen} onOpenChange={setIsGameOpen}>
+        <DialogContent className="sm:max-w-[500px] rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Gamepad2 className="w-5 h-5 text-primary" />
+              Memory Reset
+            </DialogTitle>
+            <DialogDescription>
+              Match all the pairs to clear your mind. {moves} moves made.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-4 gap-3 py-4">
+            {cards.map((card, idx) => {
+              const Icon = ICONS[card.iconIndex];
+              return (
+                <div
+                  key={card.id}
+                  onClick={() => handleCardClick(idx)}
+                  className={`
+                    aspect-square rounded-xl cursor-pointer transition-all duration-300 transform
+                    flex items-center justify-center
+                    ${card.isFlipped || card.isMatched 
+                      ? 'bg-primary text-white rotate-0' 
+                      : 'bg-slate-100 text-transparent -rotate-180 hover:bg-slate-200'}
+                  `}
+                >
+                  {(card.isFlipped || card.isMatched) && <Icon className="w-6 h-6" />}
+                </div>
+              )
+            })}
+          </div>
+
+          {isWon && (
+            <div className="bg-green-50 border border-green-200 rounded-2xl p-6 text-center space-y-3 animate-in zoom-in-95 duration-300">
+              <Trophy className="w-12 h-12 text-green-500 mx-auto" />
+              <h3 className="text-xl font-bold text-green-700">Mind Cleared!</h3>
+              <p className="text-sm text-green-600">You finished in {moves} moves. You're ready to focus again.</p>
+              <Button onClick={initGame} variant="outline" className="w-full bg-white border-green-200 text-green-700 hover:bg-green-100">
+                <RefreshCcw className="w-4 h-4 mr-2" /> Play Again
+              </Button>
+            </div>
+          )}
+
+          {!isWon && (
+            <div className="flex justify-between items-center">
+               <span className="text-sm text-muted-foreground">Focus on the icons...</span>
+               <Button variant="ghost" size="sm" onClick={initGame}>
+                 <RefreshCcw className="w-4 h-4 mr-2" /> Reset
+               </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
