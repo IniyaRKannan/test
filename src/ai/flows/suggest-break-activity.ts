@@ -40,7 +40,7 @@ const SuggestBreakActivityOutputSchema = z.object({
   content: z
     .string()
     .describe(
-      'Specific content for the activity (e.g., meditation script, song title, chatbot prompt).'}
+      'Specific content for the activity (e.g., meditation script, song title, chatbot prompt).'
     ),
   durationMinutes: z
     .number()

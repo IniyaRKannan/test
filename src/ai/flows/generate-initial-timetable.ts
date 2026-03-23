@@ -41,7 +41,7 @@ const PersonalCommitmentSchema = z.object({
   endTime: z.string().describe('HH:MM AM/PM format, e.g., "7:00 PM"'),
 });
 
-export const GenerateInitialTimetableInputSchema = z.object({
+const GenerateInitialTimetableInputSchema = z.object({
   courses: z.array(CourseSchema).describe('List of courses the student is taking, including workload and fixed schedules.'),
   studyPreferences: StudyPreferencesSchema.describe('Student\'s preferred study habits and availability.'),
   personalCommitments: z.array(PersonalCommitmentSchema).describe('Non-academic appointments and fixed commitments.'),
@@ -61,7 +61,7 @@ const DailyTimetableSchema = z.object({
   events: z.array(TimetableEventSchema).describe('List of events scheduled for this day.'),
 });
 
-export const GenerateInitialTimetableOutputSchema = z.object({
+const GenerateInitialTimetableOutputSchema = z.object({
   weeklyTimetable: z.array(DailyTimetableSchema).describe('A structured weekly timetable.'),
   summary: z.string().optional().describe('A brief summary or explanation of the generated timetable.'),
 });
