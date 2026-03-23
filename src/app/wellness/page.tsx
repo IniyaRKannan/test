@@ -37,7 +37,8 @@ import {
   Search,
   ListMusic,
   ExternalLink,
-  Timer
+  Timer,
+  Video
 } from "lucide-react"
 import { mentalWellnessChat } from "@/ai/flows/mental-wellness-chatbot-interaction"
 import { PlaceHolderImages } from "@/lib/placeholder-images"
@@ -80,20 +81,77 @@ interface Exercise {
   duration: string;
   desc: string;
   imageId: string;
+  videoUrl: string;
 }
 
 const PHYSICAL_STRETCHES: Exercise[] = [
-  { id: "1", title: "Neck Rolls", duration: "30 Sec", desc: "Slowly rotate your head to release cervical tension.", imageId: "neck-rolls" },
-  { id: "2", title: "Shoulder Shrugs", duration: "30 Sec", desc: "Lift shoulders to ears and drop them suddenly.", imageId: "shoulder-shrugs" },
-  { id: "3", title: "Standing Reach", duration: "30 Sec", desc: "Stand up and reach for the ceiling as high as possible.", imageId: "standing-reach" },
-  { id: "4", title: "Wrist Flexing", duration: "30 Sec", desc: "Prevent carpal tunnel by stretching wrists forward and back.", imageId: "wrist-flexing" }
+  { 
+    id: "1", 
+    title: "Neck Rolls", 
+    duration: "30 Sec", 
+    desc: "Slowly rotate your head to release cervical tension.", 
+    imageId: "neck-rolls",
+    videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-woman-doing-yoga-stretches-on-a-mat-42353-large.mp4"
+  },
+  { 
+    id: "2", 
+    title: "Shoulder Shrugs", 
+    duration: "30 Sec", 
+    desc: "Lift shoulders to ears and drop them suddenly.", 
+    imageId: "shoulder-shrugs",
+    videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-woman-doing-yoga-stretches-on-a-mat-42353-large.mp4"
+  },
+  { 
+    id: "3", 
+    title: "Standing Reach", 
+    duration: "30 Sec", 
+    desc: "Stand up and reach for the ceiling as high as possible.", 
+    imageId: "standing-reach",
+    videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-woman-doing-yoga-stretches-on-a-mat-42353-large.mp4"
+  },
+  { 
+    id: "4", 
+    title: "Wrist Flexing", 
+    duration: "30 Sec", 
+    desc: "Prevent carpal tunnel by stretching wrists forward and back.", 
+    imageId: "wrist-flexing",
+    videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-woman-doing-yoga-stretches-on-a-mat-42353-large.mp4"
+  }
 ];
 
 const EYE_CARE_ROUTINES: Exercise[] = [
-  { id: "5", title: "20-20-20 Rule", duration: "30 Sec", desc: "Look at something 20 feet away for at least 20 seconds.", imageId: "eyes-20" },
-  { id: "6", title: "Palming", duration: "30 Sec", desc: "Rub hands together and place warm palms over closed eyes.", imageId: "palming" },
-  { id: "7", title: "Figure Eight", duration: "30 Sec", desc: "Trace an imaginary figure eight on the floor with your eyes.", imageId: "figure-eight" },
-  { id: "8", title: "Distance Blinking", duration: "30 Sec", desc: "Blink rapidly then look at a far object to lubricate eyes.", imageId: "blinking" }
+  { 
+    id: "5", 
+    title: "20-20-20 Rule", 
+    duration: "30 Sec", 
+    desc: "Look at something 20 feet away for at least 20 seconds.", 
+    imageId: "eyes-20",
+    videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-woman-sitting-on-a-bench-and-looking-at-her-phone-41584-large.mp4"
+  },
+  { 
+    id: "6", 
+    title: "Palming", 
+    duration: "30 Sec", 
+    desc: "Rub hands together and place warm palms over closed eyes.", 
+    imageId: "palming",
+    videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-woman-sitting-on-a-bench-and-looking-at-her-phone-41584-large.mp4"
+  },
+  { 
+    id: "7", 
+    title: "Figure Eight", 
+    duration: "30 Sec", 
+    desc: "Trace an imaginary figure eight on the floor with your eyes.", 
+    imageId: "figure-eight",
+    videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-woman-sitting-on-a-bench-and-looking-at-her-phone-41584-large.mp4"
+  },
+  { 
+    id: "8", 
+    title: "Distance Blinking", 
+    duration: "30 Sec", 
+    desc: "Blink rapidly then look at a far object to lubricate eyes.", 
+    imageId: "blinking",
+    videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-woman-sitting-on-a-bench-and-looking-at-her-phone-41584-large.mp4"
+  }
 ];
 
 export default function WellnessHub() {
@@ -381,7 +439,7 @@ export default function WellnessHub() {
                         className="flex-1 h-9 rounded-lg"
                         onClick={() => startExercise(ex)}
                       >
-                        <Timer className="w-4 h-4 mr-2" /> Start 30s Timer
+                        <Video className="w-4 h-4 mr-2" /> Watch & Start 30s
                       </Button>
                     </div>
                   </div>
@@ -418,7 +476,7 @@ export default function WellnessHub() {
                         className="flex-1 h-9 rounded-lg border border-accent/20"
                         onClick={() => startExercise(ex)}
                       >
-                        <Timer className="w-4 h-4 mr-2" /> Start 30s Timer
+                        <Video className="w-4 h-4 mr-2" /> Watch & Start 30s
                       </Button>
                     </div>
                   </div>
@@ -540,20 +598,15 @@ export default function WellnessHub() {
         <DialogContent className="sm:max-w-md rounded-3xl overflow-hidden border-none shadow-2xl p-0">
           {activeExercise && (
             <div className="flex flex-col">
-              <div className="relative h-64 w-full">
-                {PlaceHolderImages.find(img => img.id === activeExercise.imageId) ? (
-                  <Image
-                    src={PlaceHolderImages.find(img => img.id === activeExercise.imageId)!.imageUrl}
-                    alt={activeExercise.title}
-                    fill
-                    className="object-cover"
-                    data-ai-hint={PlaceHolderImages.find(img => img.id === activeExercise.imageId)!.imageHint}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-slate-200 flex items-center justify-center">
-                    <Activity className="w-12 h-12 text-slate-400" />
-                  </div>
-                )}
+              <div className="relative h-64 w-full bg-slate-900">
+                <video 
+                  src={activeExercise.videoUrl} 
+                  autoPlay 
+                  loop 
+                  muted 
+                  playsInline 
+                  className="w-full h-full object-cover opacity-90"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-6">
                    <h2 className="text-2xl font-bold text-white">{activeExercise.title}</h2>
                    <p className="text-white/80 text-sm mt-1">{activeExercise.desc}</p>
