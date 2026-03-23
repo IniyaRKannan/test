@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
 import { 
   MessageCircle, 
   Music, 
@@ -18,6 +19,9 @@ import {
   Heart, 
   Volume2, 
   Play,
+  Pause,
+  SkipBack,
+  SkipForward,
   Zap,
   Sparkles,
   Coffee,
@@ -28,7 +32,9 @@ import {
   Dumbbell,
   Eye,
   Activity,
-  Wind
+  Wind,
+  Search,
+  ListMusic
 } from "lucide-react"
 import { mentalWellnessChat } from "@/ai/flows/mental-wellness-chatbot-interaction"
 
@@ -36,6 +42,23 @@ type Message = {
   role: 'user' | 'ai'
   content: string
 }
+
+type Track = {
+  id: string
+  title: string
+  artist: string
+  duration: string
+  genre: string
+  coverUrl: string
+}
+
+const TRACKS: Track[] = [
+  { id: '1', title: "Midnight Study", artist: "Lofi Girl", duration: "3:45", genre: "Lofi", coverUrl: "https://picsum.photos/seed/music1/200/200" },
+  { id: '2', title: "Rainy Library", artist: "Nature Sounds", duration: "10:00", genre: "Ambient", coverUrl: "https://picsum.photos/seed/music2/200/200" },
+  { id: '3', title: "Deep Focus Piano", artist: "Classical Mind", duration: "5:20", genre: "Classical", coverUrl: "https://picsum.photos/seed/music3/200/200" },
+  { id: '4', title: "Synthwave Productivity", artist: "Retro Runner", duration: "4:15", genre: "Electronic", coverUrl: "https://picsum.photos/seed/music4/200/200" },
+  { id: '5', title: "Forest Morning", artist: "Green Noise", duration: "15:00", genre: "Nature", coverUrl: "https://picsum.photos/seed/music5/200/200" },
+]
 
 // Memory Game Logic & Components
 const ICONS = [Zap, Heart, Sparkles, Music, Gamepad2, Coffee, ShieldCheck, Clock];
@@ -55,6 +78,12 @@ export default function WellnessHub() {
   const [isTyping, setIsTyping] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
 
+  // Audio State
+  const [currentTrack, setCurrentTrack] = useState<Track | null>(null)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const [volume, setVolume] = useState(70)
+  const [playbackProgress, setPlaybackProgress] = useState(0)
+
   // Game State
   const [isGameOpen, setIsGameOpen] = useState(false);
   const [cards, setCards] = useState<MemoryCard[]>([]);
@@ -67,6 +96,17 @@ export default function WellnessHub() {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' })
     }
   }, [messages])
+
+  // Fake playback progress
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isPlaying) {
+      interval = setInterval(() => {
+        setPlaybackProgress(prev => (prev >= 100 ? 0 : prev + 0.5))
+      }, 1000)
+    }
+    return () => clearInterval(interval)
+  }, [isPlaying])
 
   const initGame = useCallback(() => {
     const cardPairs = [...ICONS.keys(), ...ICONS.keys()];
@@ -136,8 +176,14 @@ export default function WellnessHub() {
     }
   }
 
+  const handlePlayTrack = (track: Track) => {
+    setCurrentTrack(track)
+    setIsPlaying(true)
+    setPlaybackProgress(0)
+  }
+
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-12">
+    <div className="max-w-6xl mx-auto space-y-8 pb-32">
       <header className="flex flex-col gap-2">
         <h1 className="text-4xl font-bold text-primary flex items-center gap-3">
           <Heart className="w-10 h-10 text-accent fill-accent" />
@@ -306,58 +352,126 @@ export default function WellnessHub() {
           </div>
         </TabsContent>
 
-        <TabsContent value="leisure" className="mt-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <Card className="shadow-md border-none overflow-hidden group">
-              <div className="h-40 bg-accent/20 flex items-center justify-center transition-colors group-hover:bg-accent/30">
-                <Music className="w-16 h-16 text-accent" />
-              </div>
-              <CardHeader>
-                <CardTitle>Focus Playlists</CardTitle>
-                <CardDescription>Ambient sounds for deep work.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {["Study Lofi Beats", "Forest Ambience", "Piano Relaxation"].map((track, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 border border-transparent hover:border-slate-100 cursor-pointer transition-all">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
-                        <Volume2 className="w-5 h-5 text-accent" />
-                      </div>
-                      <span className="text-sm font-semibold">{track}</span>
-                    </div>
-                    <Play className="w-4 h-4 text-muted-foreground" />
+        <TabsContent value="leisure" className="mt-8 space-y-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <Card className="lg:col-span-2 shadow-xl border-none overflow-hidden">
+              <CardHeader className="border-b bg-card">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ListMusic className="w-5 h-5 text-primary" />
+                    <CardTitle className="text-xl">Music Library</CardTitle>
                   </div>
-                ))}
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-md border-none overflow-hidden group">
-              <div className="h-40 bg-primary/10 flex items-center justify-center transition-colors group-hover:bg-primary/20">
-                <Gamepad2 className="w-16 h-16 text-primary" />
-              </div>
-              <CardHeader>
-                <CardTitle>Brain Games</CardTitle>
-                <CardDescription>Mini-tasks to reset cognitive load.</CardDescription>
+                  <div className="relative w-48">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input placeholder="Search tracks..." className="pl-8 h-8 text-xs rounded-full" />
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-4 text-center">
-                <p className="text-sm text-muted-foreground leading-relaxed">Memory matching helps switch your brain from "study mode" to "play mode" for a faster reset.</p>
-                <Button 
-                  className="w-full bg-primary hover:bg-primary/90 shadow-lg py-6"
-                  onClick={() => { initGame(); setIsGameOpen(true); }}
-                >
-                  Play Memory Reset
-                </Button>
+              <CardContent className="p-0">
+                <ScrollArea className="h-[450px]">
+                  <div className="p-4 space-y-1">
+                    {TRACKS.map((track) => (
+                      <div 
+                        key={track.id} 
+                        onClick={() => handlePlayTrack(track)}
+                        className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all hover:bg-primary/5 group ${currentTrack?.id === track.id ? 'bg-primary/10 border-l-4 border-primary' : ''}`}
+                      >
+                        <div className="flex items-center gap-4">
+                          <Avatar className="w-10 h-10 rounded-lg shadow-sm">
+                            <AvatarImage src={track.coverUrl} />
+                            <AvatarFallback><Music className="w-4 h-4" /></AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="text-sm font-bold leading-none">{track.title}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{track.artist} • {track.genre}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-6">
+                          <span className="text-xs font-medium text-muted-foreground tabular-nums">{track.duration}</span>
+                          <Button size="icon" variant="ghost" className="opacity-0 group-hover:opacity-100 h-8 w-8 rounded-full bg-primary/10 text-primary">
+                            <Play className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
               </CardContent>
             </Card>
 
-            <Card className="shadow-md border-none bg-slate-900 text-white p-6 flex flex-col justify-center items-center text-center space-y-4">
-              <Sparkles className="w-12 h-12 text-accent" />
-              <h3 className="text-xl font-bold">More Coming Soon</h3>
-              <p className="text-xs text-slate-400">We're building more AI-powered wellness tools including posture analysis and personalized meditation.</p>
-            </Card>
+            <div className="space-y-6">
+              <Card className="shadow-lg border-none overflow-hidden bg-primary text-white">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Gamepad2 className="w-5 h-5" /> Brain Games
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-white/80">Memory matching helps switch your brain from "study mode" to "play mode" for a faster reset.</p>
+                  <Button 
+                    variant="secondary"
+                    className="w-full shadow-lg h-12 font-bold"
+                    onClick={() => { initGame(); setIsGameOpen(true); }}
+                  >
+                    Play Memory Reset
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-lg border-none bg-slate-900 text-white p-6 flex flex-col justify-center items-center text-center space-y-4">
+                <Sparkles className="w-12 h-12 text-accent" />
+                <h3 className="text-xl font-bold">Postural AI</h3>
+                <p className="text-xs text-slate-400">Coming soon: Use your camera for real-time posture analysis and alerts.</p>
+                <Badge variant="outline" className="border-accent text-accent">Join Beta</Badge>
+              </Card>
+            </div>
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Persistent Audio Player Overlay */}
+      {currentTrack && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-50 animate-in slide-in-from-bottom-10 duration-500">
+          <Card className="shadow-2xl border-primary/20 bg-white/95 backdrop-blur-md rounded-2xl overflow-hidden">
+            <Progress value={playbackProgress} className="h-1 rounded-none bg-slate-100" />
+            <CardContent className="p-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-[200px]">
+                <Avatar className="w-12 h-12 rounded-xl shadow-lg">
+                  <AvatarImage src={currentTrack.coverUrl} />
+                  <AvatarFallback><Music className="w-6 h-6" /></AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col overflow-hidden">
+                  <span className="text-sm font-bold truncate">{currentTrack.title}</span>
+                  <span className="text-xs text-muted-foreground truncate">{currentTrack.artist}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 md:gap-4">
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-10 w-10">
+                  <SkipBack className="w-5 h-5" />
+                </Button>
+                <Button 
+                  size="icon" 
+                  className="h-12 w-12 rounded-full shadow-xl bg-primary hover:bg-primary/90"
+                  onClick={() => setIsPlaying(!isPlaying)}
+                >
+                  {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-1" />}
+                </Button>
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-10 w-10">
+                  <SkipForward className="w-5 h-5" />
+                </Button>
+              </div>
+
+              <div className="hidden sm:flex items-center gap-3">
+                <Volume2 className="w-4 h-4 text-muted-foreground" />
+                <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-primary w-2/3" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Memory Match Dialog */}
       <Dialog open={isGameOpen} onOpenChange={setIsGameOpen}>
