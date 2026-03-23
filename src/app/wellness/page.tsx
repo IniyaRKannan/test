@@ -2,15 +2,16 @@
 "use client"
 
 import React, { useState, useRef, useEffect, useCallback } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
+import Image from 'next/image'
 import { 
   MessageCircle, 
   Music, 
@@ -35,9 +36,11 @@ import {
   Wind,
   Search,
   ListMusic,
-  ExternalLink
+  ExternalLink,
+  Timer
 } from "lucide-react"
 import { mentalWellnessChat } from "@/ai/flows/mental-wellness-chatbot-interaction"
+import { PlaceHolderImages } from "@/lib/placeholder-images"
 
 type Message = {
   role: 'user' | 'ai'
@@ -61,7 +64,7 @@ const TRACKS: Track[] = [
   { id: '5', title: "Forest Morning", artist: "Green Noise", duration: "15:00", genre: "Nature", coverUrl: "https://picsum.photos/seed/music5/200/200" },
 ]
 
-// Memory Game Logic & Components
+// Memory Game Icons
 const ICONS = [Zap, Heart, Sparkles, Music, Gamepad2, Coffee, ShieldCheck, Clock];
 
 interface MemoryCard {
@@ -70,6 +73,28 @@ interface MemoryCard {
   isFlipped: boolean;
   isMatched: boolean;
 }
+
+interface Exercise {
+  id: string;
+  title: string;
+  duration: string;
+  desc: string;
+  imageId: string;
+}
+
+const PHYSICAL_STRETCHES: Exercise[] = [
+  { id: "1", title: "Neck Rolls", duration: "30 Sec", desc: "Slowly rotate your head to release cervical tension.", imageId: "neck-rolls" },
+  { id: "2", title: "Shoulder Shrugs", duration: "30 Sec", desc: "Lift shoulders to ears and drop them suddenly.", imageId: "shoulder-shrugs" },
+  { id: "3", title: "Standing Reach", duration: "30 Sec", desc: "Stand up and reach for the ceiling as high as possible.", imageId: "standing-reach" },
+  { id: "4", title: "Wrist Flexing", duration: "30 Sec", desc: "Prevent carpal tunnel by stretching wrists forward and back.", imageId: "wrist-flexing" }
+];
+
+const EYE_CARE_ROUTINES: Exercise[] = [
+  { id: "5", title: "20-20-20 Rule", duration: "30 Sec", desc: "Look at something 20 feet away for at least 20 seconds.", imageId: "eyes-20" },
+  { id: "6", title: "Palming", duration: "30 Sec", desc: "Rub hands together and place warm palms over closed eyes.", imageId: "palming" },
+  { id: "7", title: "Figure Eight", duration: "30 Sec", desc: "Trace an imaginary figure eight on the floor with your eyes.", imageId: "figure-eight" },
+  { id: "8", title: "Distance Blinking", duration: "30 Sec", desc: "Blink rapidly then look at a far object to lubricate eyes.", imageId: "blinking" }
+];
 
 export default function WellnessHub() {
   const [messages, setMessages] = useState<Message[]>([
@@ -86,7 +111,7 @@ export default function WellnessHub() {
 
   // Spotify State
   const [isSpotifyConnected, setIsSpotifyConnected] = useState(false)
-  const [spotifyPlaylistId, setSpotifyPlaylistId] = useState("37i9dQZF1DX8Ueb9C7V6rN") // Lofi Fruits Music
+  const [spotifyPlaylistId, setSpotifyPlaylistId] = useState("37i9dQZF1DX8Ueb9C7V6rN")
 
   // Game State
   const [isGameOpen, setIsGameOpen] = useState(false);
@@ -95,13 +120,18 @@ export default function WellnessHub() {
   const [moves, setMoves] = useState(0);
   const [isWon, setIsWon] = useState(false);
 
+  // Exercise Timer State
+  const [activeExercise, setActiveExercise] = useState<Exercise | null>(null);
+  const [exerciseTimeLeft, setExerciseTimeLeft] = useState(30);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollIntoView({ behavior: 'smooth' })
     }
   }, [messages])
 
-  // Fake playback progress
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isPlaying) {
@@ -111,6 +141,34 @@ export default function WellnessHub() {
     }
     return () => clearInterval(interval)
   }, [isPlaying])
+
+  // Exercise Timer Logic
+  useEffect(() => {
+    if (isTimerRunning && exerciseTimeLeft > 0) {
+      timerIntervalRef.current = setInterval(() => {
+        setExerciseTimeLeft(prev => prev - 1);
+      }, 1000);
+    } else if (exerciseTimeLeft === 0) {
+      setIsTimerRunning(false);
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    }
+
+    return () => {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    };
+  }, [isTimerRunning, exerciseTimeLeft]);
+
+  const startExercise = (ex: Exercise) => {
+    setActiveExercise(ex);
+    setExerciseTimeLeft(30);
+    setIsTimerRunning(true);
+  };
+
+  const closeExercise = () => {
+    setActiveExercise(null);
+    setIsTimerRunning(false);
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+  };
 
   const initGame = useCallback(() => {
     const cardPairs = [...ICONS.keys(), ...ICONS.keys()];
@@ -184,10 +242,6 @@ export default function WellnessHub() {
     setCurrentTrack(track)
     setIsPlaying(true)
     setPlaybackProgress(0)
-  }
-
-  const handleSpotifyConnect = () => {
-    setIsSpotifyConnected(true)
   }
 
   return (
@@ -305,23 +359,30 @@ export default function WellnessHub() {
                 </CardTitle>
                 <CardDescription>Combat sedentary fatigue with quick movements.</CardDescription>
               </CardHeader>
-              <CardContent className="p-6 space-y-4">
-                {[
-                  { title: "Neck Rolls", duration: "1 Min", desc: "Slowly rotate your head to release cervical tension." },
-                  { title: "Shoulder Shrugs", duration: "30 Sec", desc: "Lift shoulders to ears and drop them suddenly." },
-                  { title: "Standing Reach", duration: "2 Min", desc: "Stand up and reach for the ceiling as high as possible." },
-                  { title: "Wrist Flexing", duration: "1 Min", desc: "Prevent carpal tunnel by stretching wrists forward and back." }
-                ].map((ex, i) => (
-                  <div key={i} className="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-50 border transition-all">
-                    <div className="bg-primary/10 p-2 rounded-lg text-primary">
-                      <Activity className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-center mb-1">
-                        <h4 className="font-bold text-sm">{ex.title}</h4>
-                        <Badge variant="secondary" className="text-[10px]">{ex.duration}</Badge>
+              <CardContent className="p-6 space-y-6">
+                {PHYSICAL_STRETCHES.map((ex) => (
+                  <div key={ex.id} className="flex flex-col gap-4 p-4 rounded-xl hover:bg-slate-50 border transition-all">
+                    <div className="flex items-start gap-4">
+                      <div className="bg-primary/10 p-2 rounded-lg text-primary">
+                        <Activity className="w-5 h-5" />
                       </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{ex.desc}</p>
+                      <div className="flex-1">
+                        <div className="flex justify-between items-center mb-1">
+                          <h4 className="font-bold text-sm">{ex.title}</h4>
+                          <Badge variant="secondary" className="text-[10px]">{ex.duration}</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed mb-3">{ex.desc}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Button 
+                        size="sm" 
+                        variant="default" 
+                        className="flex-1 h-9 rounded-lg"
+                        onClick={() => startExercise(ex)}
+                      >
+                        <Timer className="w-4 h-4 mr-2" /> Start 30s Timer
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -333,25 +394,32 @@ export default function WellnessHub() {
                 <CardTitle className="flex items-center gap-2">
                   <Eye className="w-6 h-6 text-accent" /> Eye Care Routines
                 </CardTitle>
-                <CardDescription>Prevent digital eye strain (DES) during long study sessions.</CardDescription>
+                <CardDescription>Prevent digital eye strain during long study sessions.</CardDescription>
               </CardHeader>
-              <CardContent className="p-6 space-y-4">
-                {[
-                  { title: "20-20-20 Rule", duration: "20 Sec", desc: "Look at something 20 feet away for 20 seconds." },
-                  { title: "Palming", duration: "2 Min", desc: "Rub hands together and place warm palms over closed eyes." },
-                  { title: "Figure Eight", duration: "1 Min", desc: "Trace an imaginary figure eight on the floor with your eyes." },
-                  { title: "Distance Blinking", duration: "1 Min", desc: "Blink rapidly then look at a far object to lubricate eyes." }
-                ].map((ex, i) => (
-                  <div key={i} className="flex items-start gap-4 p-4 rounded-xl hover:bg-slate-50 border transition-all">
-                    <div className="bg-accent/10 p-2 rounded-lg text-accent">
-                      <Eye className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-center mb-1">
-                        <h4 className="font-bold text-sm">{ex.title}</h4>
-                        <Badge variant="secondary" className="text-[10px]">{ex.duration}</Badge>
+              <CardContent className="p-6 space-y-6">
+                {EYE_CARE_ROUTINES.map((ex) => (
+                  <div key={ex.id} className="flex flex-col gap-4 p-4 rounded-xl hover:bg-slate-50 border transition-all">
+                    <div className="flex items-start gap-4">
+                      <div className="bg-accent/10 p-2 rounded-lg text-accent">
+                        <Eye className="w-5 h-5" />
                       </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{ex.desc}</p>
+                      <div className="flex-1">
+                        <div className="flex justify-between items-center mb-1">
+                          <h4 className="font-bold text-sm">{ex.title}</h4>
+                          <Badge variant="secondary" className="text-[10px]">{ex.duration}</Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed mb-3">{ex.desc}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Button 
+                        size="sm" 
+                        variant="secondary" 
+                        className="flex-1 h-9 rounded-lg border border-accent/20"
+                        onClick={() => startExercise(ex)}
+                      >
+                        <Timer className="w-4 h-4 mr-2" /> Start 30s Timer
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -369,10 +437,6 @@ export default function WellnessHub() {
                     <div className="flex items-center gap-2">
                       <ListMusic className="w-5 h-5 text-primary" />
                       <CardTitle className="text-xl">Music Library</CardTitle>
-                    </div>
-                    <div className="relative w-48">
-                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                      <Input placeholder="Search tracks..." className="pl-8 h-8 text-xs rounded-full" />
                     </div>
                   </div>
                 </CardHeader>
@@ -408,7 +472,6 @@ export default function WellnessHub() {
                 </CardContent>
               </Card>
 
-              {/* Spotify Integration Section */}
               <Card className="shadow-xl border-none overflow-hidden bg-zinc-950 text-white">
                 <CardHeader className="border-b border-white/10 flex flex-row items-center justify-between bg-zinc-900/50">
                   <div className="flex items-center gap-3">
@@ -422,46 +485,27 @@ export default function WellnessHub() {
                   </div>
                   {!isSpotifyConnected ? (
                     <Button 
-                      onClick={handleSpotifyConnect}
+                      onClick={() => setIsSpotifyConnected(true)}
                       className="bg-[#1DB954] hover:bg-[#1ed760] text-black font-bold rounded-full px-6"
                     >
                       Connect Spotify
                     </Button>
                   ) : (
-                    <Badge className="bg-[#1DB954]/20 text-[#1DB954] border-[#1DB954]/50">
-                      Connected as Jane
-                    </Badge>
+                    <Badge className="bg-[#1DB954]/20 text-[#1DB954] border-[#1DB954]/50">Connected</Badge>
                   )}
                 </CardHeader>
                 <CardContent className="p-6">
-                  {isSpotifyConnected ? (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-sm font-bold text-zinc-300">Recommended Study Playlist</h4>
-                        <Button variant="ghost" size="sm" className="text-zinc-400 hover:text-white h-7 gap-2">
-                          <ExternalLink className="w-3 h-3" /> Open in App
-                        </Button>
-                      </div>
-                      <div className="rounded-xl overflow-hidden bg-black aspect-video relative">
-                         <iframe 
-                          src={`https://open.spotify.com/embed/playlist/${spotifyPlaylistId}?utm_source=generator&theme=0`} 
-                          width="100%" 
-                          height="100%" 
-                          frameBorder="0" 
-                          allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
-                          loading="lazy"
-                          className="absolute inset-0 border-none"
-                        ></iframe>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 space-y-4">
-                      <div className="w-16 h-16 bg-zinc-900 rounded-full flex items-center justify-center mx-auto">
-                        <ShieldCheck className="w-8 h-8 text-zinc-700" />
-                      </div>
-                      <div className="max-w-xs mx-auto">
-                        <p className="text-sm text-zinc-400">Log in to Spotify to sync your favorite focus tracks and discover curated student playlists.</p>
-                      </div>
+                  {isSpotifyConnected && (
+                    <div className="rounded-xl overflow-hidden bg-black aspect-video relative">
+                      <iframe 
+                        src={`https://open.spotify.com/embed/playlist/${spotifyPlaylistId}?utm_source=generator&theme=0`} 
+                        width="100%" 
+                        height="100%" 
+                        frameBorder="0" 
+                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" 
+                        loading="lazy"
+                        className="absolute inset-0 border-none"
+                      ></iframe>
                     </div>
                   )}
                 </CardContent>
@@ -486,61 +530,102 @@ export default function WellnessHub() {
                   </Button>
                 </CardContent>
               </Card>
-
-              <Card className="shadow-lg border-none bg-slate-900 text-white p-6 flex flex-col justify-center items-center text-center space-y-4">
-                <Sparkles className="w-12 h-12 text-accent" />
-                <h3 className="text-xl font-bold">Postural AI</h3>
-                <p className="text-xs text-slate-400">Coming soon: Use your camera for real-time posture analysis and alerts.</p>
-                <Badge variant="outline" className="border-accent text-accent">Join Beta</Badge>
-              </Card>
             </div>
           </div>
         </TabsContent>
       </Tabs>
 
-      {/* Persistent Audio Player Overlay */}
-      {currentTrack && !isSpotifyConnected && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-50 animate-in slide-in-from-bottom-10 duration-500">
-          <Card className="shadow-2xl border-primary/20 bg-white/95 backdrop-blur-md rounded-2xl overflow-hidden">
-            <Progress value={playbackProgress} className="h-1 rounded-none bg-slate-100" />
-            <CardContent className="p-4 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3 min-w-[200px]">
-                <Avatar className="w-12 h-12 rounded-xl shadow-lg">
-                  <AvatarImage src={currentTrack.coverUrl} />
-                  <AvatarFallback><Music className="w-6 h-6" /></AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col overflow-hidden">
-                  <span className="text-sm font-bold truncate">{currentTrack.title}</span>
-                  <span className="text-xs text-muted-foreground truncate">{currentTrack.artist}</span>
+      {/* Exercise Timer Dialog */}
+      <Dialog open={!!activeExercise} onOpenChange={(open) => !open && closeExercise()}>
+        <DialogContent className="sm:max-w-md rounded-3xl overflow-hidden border-none shadow-2xl p-0">
+          {activeExercise && (
+            <div className="flex flex-col">
+              <div className="relative h-64 w-full">
+                {PlaceHolderImages.find(img => img.id === activeExercise.imageId) ? (
+                  <Image
+                    src={PlaceHolderImages.find(img => img.id === activeExercise.imageId)!.imageUrl}
+                    alt={activeExercise.title}
+                    fill
+                    className="object-cover"
+                    data-ai-hint={PlaceHolderImages.find(img => img.id === activeExercise.imageId)!.imageHint}
+                  />
+                ) : (
+                  <div className="w-full h-full bg-slate-200 flex items-center justify-center">
+                    <Activity className="w-12 h-12 text-slate-400" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-6">
+                   <h2 className="text-2xl font-bold text-white">{activeExercise.title}</h2>
+                   <p className="text-white/80 text-sm mt-1">{activeExercise.desc}</p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 md:gap-4">
-                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-10 w-10">
-                  <SkipBack className="w-5 h-5" />
-                </Button>
-                <Button 
-                  size="icon" 
-                  className="h-12 w-12 rounded-full shadow-xl bg-primary hover:bg-primary/90"
-                  onClick={() => setIsPlaying(!isPlaying)}
-                >
-                  {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-1" />}
-                </Button>
-                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary h-10 w-10">
-                  <SkipForward className="w-5 h-5" />
-                </Button>
-              </div>
-
-              <div className="hidden sm:flex items-center gap-3">
-                <Volume2 className="w-4 h-4 text-muted-foreground" />
-                <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-primary w-2/3" />
+              <div className="p-8 space-y-8 flex flex-col items-center">
+                <div className="relative w-40 h-40 flex items-center justify-center">
+                   <svg className="w-full h-full transform -rotate-90">
+                     <circle
+                       cx="80"
+                       cy="80"
+                       r="70"
+                       stroke="currentColor"
+                       strokeWidth="10"
+                       fill="transparent"
+                       className="text-slate-100"
+                     />
+                     <circle
+                       cx="80"
+                       cy="80"
+                       r="70"
+                       stroke="currentColor"
+                       strokeWidth="10"
+                       fill="transparent"
+                       strokeDasharray={440}
+                       strokeDashoffset={440 - (440 * (30 - exerciseTimeLeft)) / 30}
+                       className="text-primary transition-all duration-1000"
+                       strokeLinecap="round"
+                     />
+                   </svg>
+                   <span className="absolute text-5xl font-mono font-bold text-primary">
+                     {exerciseTimeLeft}s
+                   </span>
                 </div>
+
+                <div className="flex gap-4 w-full">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1 rounded-xl h-12"
+                    onClick={() => {
+                      setExerciseTimeLeft(30);
+                      setIsTimerRunning(true);
+                    }}
+                  >
+                    <RefreshCcw className="w-4 h-4 mr-2" /> Reset
+                  </Button>
+                  <Button 
+                    className="flex-1 rounded-xl h-12"
+                    onClick={() => setIsTimerRunning(!isTimerRunning)}
+                  >
+                    {isTimerRunning ? <Pause className="w-4 h-4 mr-2" /> : <Play className="w-4 h-4 mr-2" />}
+                    {isTimerRunning ? 'Pause' : 'Resume'}
+                  </Button>
+                </div>
+
+                {exerciseTimeLeft === 0 && (
+                  <div className="text-center space-y-2 animate-in fade-in zoom-in duration-300">
+                    <Trophy className="w-10 h-10 text-green-500 mx-auto" />
+                    <p className="font-bold text-green-600">Great job! Exercise complete.</p>
+                  </div>
+                )}
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+              <DialogFooter className="p-4 bg-slate-50 border-t flex sm:justify-center">
+                <Button variant="ghost" className="w-full rounded-xl" onClick={closeExercise}>
+                  Close Session
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Memory Match Dialog */}
       <Dialog open={isGameOpen} onOpenChange={setIsGameOpen}>
@@ -579,21 +664,10 @@ export default function WellnessHub() {
             <div className="bg-green-50 border border-green-200 rounded-2xl p-6 text-center space-y-3 animate-in zoom-in-95 duration-300">
               <Trophy className="w-12 h-12 text-green-500 mx-auto" />
               <h3 className="text-2xl font-bold text-green-700">Mind Cleared!</h3>
-              <p className="text-sm text-green-600 font-medium">Excellent work! You finished in {moves} moves. You're ready to re-focus.</p>
+              <p className="text-sm text-green-600 font-medium">Excellent work! You finished in {moves} moves.</p>
               <Button onClick={initGame} variant="outline" className="w-full bg-white border-green-200 text-green-700 hover:bg-green-100 h-12">
                 <RefreshCcw className="w-4 h-4 mr-2" /> Play Again
               </Button>
-            </div>
-          )}
-
-          {!isWon && (
-            <div className="flex justify-between items-center pt-4">
-               <span className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                 <Clock className="w-4 h-4" /> Focus on the icons...
-               </span>
-               <Button variant="ghost" size="sm" onClick={initGame} className="text-muted-foreground hover:text-primary">
-                 <RefreshCcw className="w-4 h-4 mr-2" /> Reset Game
-               </Button>
             </div>
           )}
         </DialogContent>

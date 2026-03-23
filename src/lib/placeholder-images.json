@@ -1,3 +1,52 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "neck-rolls",
+      "description": "Illustration of neck rolling exercise",
+      "imageUrl": "https://picsum.photos/seed/neck/400/300",
+      "imageHint": "neck exercise"
+    },
+    {
+      "id": "shoulder-shrugs",
+      "description": "Illustration of shoulder shrugging",
+      "imageUrl": "https://picsum.photos/seed/shoulders/400/300",
+      "imageHint": "shoulder stretch"
+    },
+    {
+      "id": "standing-reach",
+      "description": "Person stretching arms towards ceiling",
+      "imageUrl": "https://picsum.photos/seed/stretch/400/300",
+      "imageHint": "fullbody stretch"
+    },
+    {
+      "id": "wrist-flexing",
+      "description": "Wrist stretching technique",
+      "imageUrl": "https://picsum.photos/seed/wrists/400/300",
+      "imageHint": "wrist stretch"
+    },
+    {
+      "id": "eyes-20",
+      "description": "Eye focus exercise visualization",
+      "imageUrl": "https://picsum.photos/seed/eyes1/400/300",
+      "imageHint": "eye focus"
+    },
+    {
+      "id": "palming",
+      "description": "Illustration of palming eye exercise",
+      "imageUrl": "https://picsum.photos/seed/eyes2/400/300",
+      "imageHint": "palm eyes"
+    },
+    {
+      "id": "figure-eight",
+      "description": "Tracing figure eight with eyes",
+      "imageUrl": "https://picsum.photos/seed/eyes3/400/300",
+      "imageHint": "eye movement"
+    },
+    {
+      "id": "blinking",
+      "description": "Blinking exercise for lubrication",
+      "imageUrl": "https://picsum.photos/seed/eyes4/400/300",
+      "imageHint": "eye blink"
+    }
+  ]
 }
