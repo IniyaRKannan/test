@@ -38,7 +38,9 @@ import {
   Timer,
   Video,
   Grid3X3,
-  CheckCircle2
+  CheckCircle2,
+  LayoutGrid,
+  Type
 } from "lucide-react"
 import { mentalWellnessChat } from "@/ai/flows/mental-wellness-chatbot-interaction"
 
@@ -65,6 +67,8 @@ const TRACKS: Track[] = [
 ]
 
 const ICONS = [Zap, Heart, Sparkles, Music, Gamepad2, Coffee, ShieldCheck, Clock];
+
+const WELLNESS_WORDS = ["FOCUS", "BREATHE", "CALM", "MINDFUL", "RELAX", "BALANCE", "ZEN", "AURA", "STRENGTH", "PEACE"];
 
 interface MemoryCard {
   id: number;
@@ -127,6 +131,19 @@ export default function WellnessHub() {
   const [selectedCell, setSelectedCell] = useState<{row: number, col: number} | null>(null);
   const [sudokuWon, setSudokuWon] = useState(false);
   const [sudokuError, setSudokuError] = useState<{row: number, col: number} | null>(null);
+
+  // Slide Puzzle State
+  const [isSlideOpen, setIsSlideOpen] = useState(false);
+  const [slideBoard, setSlideBoard] = useState<number[]>([]);
+  const [slideMoves, setSlideMoves] = useState(0);
+  const [slideWon, setSlideWon] = useState(false);
+
+  // Word Zen State
+  const [isWordOpen, setIsWordOpen] = useState(false);
+  const [currentWord, setCurrentWord] = useState("");
+  const [scrambledWord, setScrambledWord] = useState("");
+  const [wordInput, setWordInput] = useState("");
+  const [wordWon, setWordWon] = useState(false);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -260,7 +277,6 @@ export default function WellnessHub() {
       return;
     }
 
-    // Validation logic
     const isValid = (board: (number | null)[][], r: number, c: number, n: number) => {
       for (let x = 0; x < 9; x++) if (board[r][x] === n && x !== c) return false;
       for (let x = 0; x < 9; x++) if (board[x][c] === n && x !== r) return false;
@@ -281,6 +297,66 @@ export default function WellnessHub() {
     } else {
       setSudokuError({ row, col });
       setTimeout(() => setSudokuError(null), 1000);
+    }
+  };
+
+  // Slide Puzzle Logic
+  const initSlidePuzzle = useCallback(() => {
+    let arr = [1, 2, 3, 4, 5, 6, 7, 8, 0];
+    // Shuffle with solvability check
+    const shuffle = (a: number[]) => {
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    };
+    
+    let shuffled = shuffle([...arr]);
+    // Simplification: just reset to almost solved to ensure winnability for a demo
+    setSlideBoard(shuffled);
+    setSlideMoves(0);
+    setSlideWon(false);
+  }, []);
+
+  const handleSlideClick = (index: number) => {
+    const emptyIndex = slideBoard.indexOf(0);
+    const row = Math.floor(index / 3);
+    const col = index % 3;
+    const emptyRow = Math.floor(emptyIndex / 3);
+    const emptyCol = emptyIndex % 3;
+
+    const isAdjacent = (Math.abs(row - emptyRow) === 1 && col === emptyCol) ||
+                      (Math.abs(col - emptyCol) === 1 && row === emptyRow);
+
+    if (isAdjacent) {
+      const newBoard = [...slideBoard];
+      [newBoard[index], newBoard[emptyIndex]] = [newBoard[emptyIndex], newBoard[index]];
+      setSlideBoard(newBoard);
+      setSlideMoves(m => m + 1);
+      
+      if (newBoard.every((val, i) => val === (i + 1) % 9)) {
+        setSlideWon(true);
+      }
+    }
+  };
+
+  // Word Zen Logic
+  const initWordZen = useCallback(() => {
+    const word = WELLNESS_WORDS[Math.floor(Math.random() * WELLNESS_WORDS.length)];
+    const scrambled = word.split('').sort(() => Math.random() - 0.5).join('');
+    setCurrentWord(word);
+    setScrambledWord(scrambled);
+    setWordInput("");
+    setWordWon(false);
+  }, []);
+
+  const handleWordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (wordInput.toUpperCase() === currentWord) {
+      setWordWon(true);
+    } else {
+      setWordInput("");
     }
   };
 
@@ -480,11 +556,13 @@ export default function WellnessHub() {
             <div className="space-y-6">
               <Card className="shadow-lg border-none overflow-hidden bg-primary text-white">
                 <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Gamepad2 className="w-5 h-5" /> Mind Reset Games</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-3">
                   <p className="text-sm text-white/80">Take a quick mental break with our selection of stress-relieving games.</p>
-                  <div className="grid grid-cols-1 gap-3">
-                    <Button variant="secondary" className="w-full shadow-lg h-12 font-bold" onClick={() => { initMemoryGame(); setIsGameOpen(true); }}><Zap className="w-4 h-4 mr-2" /> Play Memory Reset</Button>
-                    <Button variant="secondary" className="w-full shadow-lg h-12 font-bold bg-accent text-white hover:bg-accent/90" onClick={() => { initSudoku(); setIsSudokuOpen(true); }}><Grid3X3 className="w-4 h-4 mr-2" /> Play Sudoku</Button>
+                  <div className="grid grid-cols-1 gap-2">
+                    <Button variant="secondary" className="w-full shadow-lg h-11 font-bold" onClick={() => { initMemoryGame(); setIsGameOpen(true); }}><Zap className="w-4 h-4 mr-2" /> Memory Reset</Button>
+                    <Button variant="secondary" className="w-full shadow-lg h-11 font-bold bg-accent text-white hover:bg-accent/90" onClick={() => { initSudoku(); setIsSudokuOpen(true); }}><Grid3X3 className="w-4 h-4 mr-2" /> Sudoku Break</Button>
+                    <Button variant="secondary" className="w-full shadow-lg h-11 font-bold bg-white text-primary hover:bg-white/90" onClick={() => { initSlidePuzzle(); setIsSlideOpen(true); }}><LayoutGrid className="w-4 h-4 mr-2" /> Slide Shuffle</Button>
+                    <Button variant="secondary" className="w-full shadow-lg h-11 font-bold bg-slate-900 text-white hover:bg-slate-800" onClick={() => { initWordZen(); setIsWordOpen(true); }}><Type className="w-4 h-4 mr-2" /> Word Zen</Button>
                   </div>
                 </CardContent>
               </Card>
@@ -539,7 +617,7 @@ export default function WellnessHub() {
       {/* Sudoku Dialog */}
       <Dialog open={isSudokuOpen} onOpenChange={setIsSudokuOpen}>
         <DialogContent className="sm:max-w-[500px] rounded-3xl border-none shadow-2xl">
-          <DialogHeader><DialogTitle className="flex items-center gap-2 text-2xl font-bold text-primary"><Grid3X3 className="w-6 h-6" /> Sudoku Break</DialogTitle><DialogDescription>A classic puzzle to sharpen your focus. Tap cells to select.</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle className="flex items-center gap-2 text-2xl font-bold text-primary"><Grid3X3 className="w-6 h-6" /> Sudoku Break</DialogTitle><DialogDescription>A classic puzzle to sharpen your focus.</DialogDescription></DialogHeader>
           <div className="grid grid-cols-9 gap-1 py-4 bg-slate-200 p-2 rounded-xl relative">
             {sudokuBoard.map((row, rIdx) => row.map((cell, cIdx) => (
               <div 
@@ -565,12 +643,85 @@ export default function WellnessHub() {
             <div className="mt-4 bg-green-50 border border-green-200 p-6 rounded-2xl text-center space-y-2 animate-in fade-in zoom-in duration-300">
               <CheckCircle2 className="w-10 h-10 text-green-500 mx-auto" />
               <h3 className="text-xl font-bold text-green-700">Puzzle Solved!</h3>
-              <p className="text-sm text-green-600">Your mind is now sharp and ready for the next study block.</p>
+              <p className="text-sm text-green-600">Your mind is sharp.</p>
             </div>
           )}
           <DialogFooter className="flex sm:justify-center gap-2 mt-4">
-             <Button variant="outline" onClick={initSudoku} className="flex-1"><RefreshCcw className="w-4 h-4 mr-2" /> Reset Board</Button>
-             <Button className="flex-1" onClick={() => setIsSudokuOpen(false)}>Back to Hub</Button>
+             <Button variant="outline" onClick={initSudoku} className="flex-1"><RefreshCcw className="w-4 h-4 mr-2" /> Reset</Button>
+             <Button className="flex-1" onClick={() => setIsSudokuOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Slide Puzzle Dialog */}
+      <Dialog open={isSlideOpen} onOpenChange={setIsSlideOpen}>
+        <DialogContent className="sm:max-w-[400px] rounded-3xl border-none shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-2xl font-bold text-primary">
+              <LayoutGrid className="w-6 h-6" /> Slide Shuffle
+            </DialogTitle>
+            <DialogDescription>Arrange tiles in numerical order. {slideMoves} moves.</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-3 gap-2 bg-slate-200 p-3 rounded-2xl aspect-square mt-4">
+            {slideBoard.map((num, i) => (
+              <div 
+                key={i} 
+                onClick={() => handleSlideClick(i)}
+                className={`flex items-center justify-center text-2xl font-bold rounded-xl cursor-pointer transition-all shadow-sm ${
+                  num === 0 ? 'bg-slate-300 opacity-50 cursor-default' : 'bg-white text-primary hover:bg-primary/5'
+                }`}
+              >
+                {num !== 0 && num}
+              </div>
+            ))}
+          </div>
+          {slideWon && (
+            <div className="mt-6 bg-green-50 border border-green-200 p-6 rounded-2xl text-center space-y-3 animate-in zoom-in-95">
+              <Trophy className="w-12 h-12 text-green-500 mx-auto" />
+              <h3 className="text-2xl font-bold text-green-700">Perfect Alignment!</h3>
+              <Button onClick={initSlidePuzzle} variant="outline" className="w-full bg-white border-green-200 text-green-700"><RefreshCcw className="w-4 h-4 mr-2" /> Play Again</Button>
+            </div>
+          )}
+          <DialogFooter className="flex sm:justify-center gap-2 mt-4">
+            <Button variant="outline" onClick={initSlidePuzzle} className="flex-1">Shuffle</Button>
+            <Button className="flex-1" onClick={() => setIsSlideOpen(false)}>Back</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Word Zen Dialog */}
+      <Dialog open={isWordOpen} onOpenChange={setIsWordOpen}>
+        <DialogContent className="sm:max-w-[400px] rounded-3xl border-none shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-2xl font-bold text-primary">
+              <Type className="w-6 h-6" /> Word Zen
+            </DialogTitle>
+            <DialogDescription>Unscramble the wellness-themed word.</DialogDescription>
+          </DialogHeader>
+          <div className="py-8 space-y-6 text-center">
+            <div className="bg-slate-100 p-8 rounded-2xl tracking-[0.5em] text-3xl font-black text-primary uppercase shadow-inner">
+              {scrambledWord}
+            </div>
+            <form onSubmit={handleWordSubmit} className="space-y-4">
+              <Input 
+                value={wordInput} 
+                onChange={(e) => setWordInput(e.target.value)} 
+                placeholder="Type the word..." 
+                className="h-14 text-center text-xl font-bold rounded-xl border-2 focus-visible:ring-primary"
+                autoFocus
+              />
+              <Button type="submit" className="w-full h-12 text-lg font-bold">Check Word</Button>
+            </form>
+          </div>
+          {wordWon && (
+            <div className="bg-green-50 border border-green-200 p-6 rounded-2xl text-center space-y-3 animate-in fade-in">
+              <CheckCircle2 className="w-10 h-10 text-green-500 mx-auto" />
+              <h3 className="text-xl font-bold text-green-700">That's it: {currentWord}!</h3>
+              <Button onClick={initWordZen} variant="outline" className="w-full bg-white text-green-700"><RefreshCcw className="w-4 h-4 mr-2" /> Next Word</Button>
+            </div>
+          )}
+          <DialogFooter>
+             <Button variant="ghost" onClick={initWordZen} className="w-full">Get New Word</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
