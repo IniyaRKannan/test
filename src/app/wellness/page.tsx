@@ -37,7 +37,8 @@ import {
   ExternalLink,
   Timer,
   Video,
-  Grid3X3
+  Grid3X3,
+  CheckCircle2
 } from "lucide-react"
 import { mentalWellnessChat } from "@/ai/flows/mental-wellness-chatbot-interaction"
 
@@ -125,12 +126,7 @@ export default function WellnessHub() {
   const [initialSudoku, setInitialSudoku] = useState<boolean[][]>([]);
   const [selectedCell, setSelectedCell] = useState<{row: number, col: number} | null>(null);
   const [sudokuWon, setSudokuWon] = useState(false);
-
-  // Exercise Timer State
-  const [activeExercise, setActiveExercise] = useState<Exercise | null>(null);
-  const [exerciseTimeLeft, setExerciseTimeLeft] = useState(30);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [sudokuError, setSudokuError] = useState<{row: number, col: number} | null>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -147,6 +143,12 @@ export default function WellnessHub() {
     }
     return () => clearInterval(interval)
   }, [isPlaying])
+
+  // Exercise Timer State
+  const [activeExercise, setActiveExercise] = useState<Exercise | null>(null);
+  const [exerciseTimeLeft, setExerciseTimeLeft] = useState(30);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (isTimerRunning && exerciseTimeLeft > 0) {
@@ -235,6 +237,7 @@ export default function WellnessHub() {
     setInitialSudoku(puzzle.map(row => row.map(cell => cell !== null)));
     setSelectedCell(null);
     setSudokuWon(false);
+    setSudokuError(null);
   }, []);
 
   const handleSudokuCellClick = (row: number, col: number) => {
@@ -247,13 +250,38 @@ export default function WellnessHub() {
 
   const handleSudokuInput = (num: number) => {
     if (!selectedCell) return;
-    const newBoard = [...sudokuBoard.map(row => [...row])];
-    newBoard[selectedCell.row][selectedCell.col] = num;
-    setSudokuBoard(newBoard);
+    const { row, col } = selectedCell;
+    const newBoard = sudokuBoard.map(r => [...r]);
     
-    // Check if won (simplified)
-    const isFull = newBoard.every(row => row.every(cell => cell !== null));
-    if (isFull) setSudokuWon(true);
+    if (num === 0) {
+      newBoard[row][col] = null;
+      setSudokuBoard(newBoard);
+      setSudokuError(null);
+      return;
+    }
+
+    // Validation logic
+    const isValid = (board: (number | null)[][], r: number, c: number, n: number) => {
+      for (let x = 0; x < 9; x++) if (board[r][x] === n && x !== c) return false;
+      for (let x = 0; x < 9; x++) if (board[x][c] === n && x !== r) return false;
+      let startRow = r - r % 3, startCol = c - c % 3;
+      for (let i = 0; i < 3; i++)
+        for (let j = 0; j < 3; j++)
+          if (board[i + startRow][j + startCol] === n && (i + startRow !== r || j + startCol !== c)) return false;
+      return true;
+    };
+
+    if (isValid(newBoard, row, col, num)) {
+      newBoard[row][col] = num;
+      setSudokuBoard(newBoard);
+      setSudokuError(null);
+      
+      const isFull = newBoard.every(r => r.every(cell => cell !== null));
+      if (isFull) setSudokuWon(true);
+    } else {
+      setSudokuError({ row, col });
+      setTimeout(() => setSudokuError(null), 1000);
+    }
   };
 
   async function handleSend() {
@@ -511,16 +539,17 @@ export default function WellnessHub() {
       {/* Sudoku Dialog */}
       <Dialog open={isSudokuOpen} onOpenChange={setIsSudokuOpen}>
         <DialogContent className="sm:max-w-[500px] rounded-3xl border-none shadow-2xl">
-          <DialogHeader><DialogTitle className="flex items-center gap-2 text-2xl font-bold text-primary"><Grid3X3 className="w-6 h-6" /> Sudoku Break</DialogTitle><DialogDescription>A classic puzzle to sharpen your focus.</DialogDescription></DialogHeader>
-          <div className="grid grid-cols-9 gap-1 py-4 bg-slate-200 p-2 rounded-xl">
+          <DialogHeader><DialogTitle className="flex items-center gap-2 text-2xl font-bold text-primary"><Grid3X3 className="w-6 h-6" /> Sudoku Break</DialogTitle><DialogDescription>A classic puzzle to sharpen your focus. Tap cells to select.</DialogDescription></DialogHeader>
+          <div className="grid grid-cols-9 gap-1 py-4 bg-slate-200 p-2 rounded-xl relative">
             {sudokuBoard.map((row, rIdx) => row.map((cell, cIdx) => (
               <div 
                 key={`${rIdx}-${cIdx}`} 
                 onClick={() => handleSudokuCellClick(rIdx, cIdx)}
-                className={`aspect-square flex items-center justify-center text-sm font-bold cursor-pointer rounded-sm transition-colors ${
-                  selectedCell?.row === rIdx && selectedCell?.col === cIdx ? 'bg-primary text-white' : 
-                  initialSudoku[rIdx][cIdx] ? 'bg-slate-50 text-slate-800' : 'bg-white text-primary'
-                } ${ (cIdx + 1) % 3 === 0 && cIdx < 8 ? 'mr-1' : '' } ${ (rIdx + 1) % 3 === 0 && rIdx < 8 ? 'mb-1' : '' }`}
+                className={`aspect-square flex items-center justify-center text-sm font-bold cursor-pointer rounded-sm transition-all ${
+                  selectedCell?.row === rIdx && selectedCell?.col === cIdx ? 'bg-primary text-white scale-110 z-10' : 
+                  initialSudoku[rIdx][cIdx] ? 'bg-slate-50 text-slate-800' : 'bg-white text-primary hover:bg-slate-100'
+                } ${sudokuError?.row === rIdx && sudokuError?.col === cIdx ? 'bg-destructive text-white animate-shake' : ''} 
+                ${ (cIdx + 1) % 3 === 0 && cIdx < 8 ? 'mr-1' : '' } ${ (rIdx + 1) % 3 === 0 && rIdx < 8 ? 'mb-1' : '' }`}
               >
                 {cell}
               </div>
@@ -530,10 +559,19 @@ export default function WellnessHub() {
             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
               <Button key={num} variant="outline" className="h-10 font-bold" onClick={() => handleSudokuInput(num)} disabled={!selectedCell}>{num}</Button>
             ))}
-            <Button variant="ghost" onClick={() => selectedCell && handleSudokuInput(0)} className="col-span-1 h-10"><RefreshCcw className="w-4 h-4" /></Button>
+            <Button variant="ghost" onClick={() => handleSudokuInput(0)} className="col-span-1 h-10 border border-dashed"><RefreshCcw className="w-4 h-4" /></Button>
           </div>
-          {sudokuWon && <div className="mt-4 bg-green-50 p-4 rounded-xl text-center"><Trophy className="w-8 h-8 text-green-500 mx-auto mb-2" /><p className="font-bold text-green-700">Puzzle Solved!</p></div>}
-          <DialogFooter><Button variant="outline" onClick={initSudoku} className="w-full mt-4"><RefreshCcw className="w-4 h-4 mr-2" /> New Game</Button></DialogFooter>
+          {sudokuWon && (
+            <div className="mt-4 bg-green-50 border border-green-200 p-6 rounded-2xl text-center space-y-2 animate-in fade-in zoom-in duration-300">
+              <CheckCircle2 className="w-10 h-10 text-green-500 mx-auto" />
+              <h3 className="text-xl font-bold text-green-700">Puzzle Solved!</h3>
+              <p className="text-sm text-green-600">Your mind is now sharp and ready for the next study block.</p>
+            </div>
+          )}
+          <DialogFooter className="flex sm:justify-center gap-2 mt-4">
+             <Button variant="outline" onClick={initSudoku} className="flex-1"><RefreshCcw className="w-4 h-4 mr-2" /> Reset Board</Button>
+             <Button className="flex-1" onClick={() => setIsSudokuOpen(false)}>Back to Hub</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
